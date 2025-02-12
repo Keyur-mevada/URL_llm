@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+    {% block title %}{% endblock title %} Manage Domains</title>
+  
+    {% block body %}
+
+    <h2 class="text-center mb-4">Manage Domains</h2>
+
+    <!-- Display Error Message -->
+    {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
+    <!-- Add New Domain Form -->
+    <div class="card p-4 mb-4">
+        <h4>Add a New Domain</h4>
+        <form id="domainForm">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label for="domain_name" class="form-label">Domain Name:</label>
+                <input type="text" id="domain_name" name="domain_name" class="form-control" placeholder="e.g. www.example.com" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Domain</button>
+        </form>
+        <div id="status" class="mt-3 text-info" style="display: none;">
+            <span>⏳ Scanning domain... Please wait.</span>
+        </div>
+    </div>
+
+    <!-- Display Existing Domains -->
+    <div class="card p-4">
+        <h4>Existing Domains</h4>
+        <table class="table table-striped mt-3">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Domain Name</th>
+                    <th>Unique URLs Captured</th>
+                </tr>
+            </thead>
+            <tbody id="domainsTable">
+                {% for domain in domains %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ domain.name }}</td>
+                    <td>{{ domain.url_in_domain }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" class="text-center text-muted">No domains added yet.</td>
+                </tr>
+                {% endfor %}
+
+                <tr>
+                    <td></td>
+                    <td contenteditable="true" ></td>
+                    <td></td>
+                </tr>
+
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            $("#domainForm").submit(function (e) {
+                e.preventDefault();
+                var domainName = $("#domain_name").val();
+                $("#status").show(); // Show loading status
+
+                $.ajax({
+                    type: "POST",
+                    url: "{% url 'manage_domains' %}",
+                    data: $(this).serialize(),
+                    success: function (response) {
+                        $("#status").text("✅ URLs retrieved successfully! Updating...");
+
+                        // Refresh the table with new data after delay
+                        setTimeout(function () {
+                            location.reload();
+                        }, 3000);
+                    },
+                    error: function () {
+                        $("#status").text("❌ Error fetching URLs.");
+                    }
+                });
+            });
+        });
+    </script>
+    {% endblock body %}
