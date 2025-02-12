@@ -5,6 +5,11 @@ from bs4 import BeautifulSoup  # Added for metadata extraction
 from .models import Domain, URL, URLSummary
 from newspaper import Article
 from django.utils import timezone
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.options import Options
+import time
 
 # List of unwanted file extensions
 UNWANTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".pdf", ".svg", ".mp4", ".mp3", ".webp"}
@@ -15,46 +20,77 @@ DATE_THRESHOLD = datetime.now() - timedelta(days=0.5 * 365)
 
 # _____________________ Extract Metadata from URL _______________________#
 def extract_article_data(url):
-    """Extract title, author, content, and publication date from a webpage."""
+    """Extract title, author, content, and publication date from a webpage (static + JS-based)."""
     try:
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
         }
 
-        # Try fetching article with Newspaper3k library
+        # 1. Attempt Static Fetch (Fastest for most sites)
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+
+        # Newspaper3k for structured data
         article = Article(url)
-        article.download(headers=headers)  # Add headers to the download
+        article.download(input_html=response.text)
         article.parse()
 
-        # Extract metadata
-        title = article.title if article.title else "Unknown Title"
-        author = article.authors[0] if article.authors else "Unknown"
-        content = article.text
-        publish_date = article.publish_date
+        title = article.title or "Unknown Title"
+        author = ", ".join(article.authors) if article.authors else "Unknown"
+        content = article.text.strip()
+        publish_date = article.publish_date.strftime("%Y-%m-%d") if article.publish_date else "Unknown"
 
-        # If `content` is empty, fallback to BeautifulSoup
+        # 2. Fallback to BeautifulSoup if content is empty
         if not content:
-            response = requests.get(url, timeout=10, headers=headers)
-            soup = BeautifulSoup(response.text, "html.parser")
-            content = " ".join([p.text for p in soup.find_all("p")])
+            soup = BeautifulSoup(response.text, 'html.parser')
+            content = ' '.join(p.get_text(strip=True) for p in soup.find_all(['p', 'div']))
+            title = title or (soup.title.string if soup.title else "Unknown Title")
 
-        # Convert date to string format
-        publish_date = publish_date.strftime("%Y-%m-%d") if publish_date else "Unknown"
+        # 3. Check if content is still empty -> Try Selenium for JS-heavy Sites
+        if not content.strip():
+            print(f"Static extraction failed for {url}. Trying Selenium...")
+
+            content, title = extract_content_with_selenium(url)
 
         return {
             "url": url,
-            "title": title,
-            "author": author,
-            "content": content[:5000],  # Limit content size to prevent database overflow
+            "title": title.strip() if title else "Unknown Title",
+            "author": author.strip(),
+            "content": content.strip()[:5000],  # Limit content
             "published_date": publish_date
         }
 
-    except requests.exceptions.RequestException as req_err:
-        print(f"Request error for {url}: {req_err}")
     except Exception as e:
-        print(f"Error processing {url}: {e}")
+        print(f"Failed to extract data from {url}. Error: {e}")
+        return None
 
-    return None  # Return None if extraction fails
+
+def extract_content_with_selenium(url):
+    """Extract content using Selenium for JavaScript-heavy sites."""
+    try:
+        options = Options()
+        options.add_argument("--headless")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+        driver.get(url)
+        time.sleep(5)  # Let the JS content load (tweak if needed)
+
+        soup = BeautifulSoup(driver.page_source, 'html.parser')
+        content = ' '.join(p.get_text(strip=True) for p in soup.find_all(['p', 'div']))
+        title = soup.title.string if soup.title else "Unknown Title"
+
+        driver.quit()
+
+        return content, title
+
+    except Exception as e:
+        print(f"Selenium extraction failed for {url}. Error: {e}")
+        return "", "Unknown Title"
+
 
 # _____________________ Fetch Sitemaps from robots.txt _______________________#
 def fetch_robots_txt(domain):
