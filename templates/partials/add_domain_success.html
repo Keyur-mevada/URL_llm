@@ -1,0 +1,28 @@
+{% if er == 1 %}
+    <span id="domain_error" style="margin-left: 20px; color:red;" hx-swap-oob="true">Invalid domain format. Use www.example.com</span>
+
+{% elif er == 2 %}
+    <span id="domain_error" style="margin-left: 20px; color:red;" hx-swap-oob="true">Domain already exists!</span>
+
+{% elif er == 0 %}
+    <span id="domain_error" style="margin-left: 20px; color:green;" hx-swap-oob="true">Domain added successfully!</span>
+{% endif %}
+
+<tbody id="domain-summary-table-body" hx-swap-oob="true">
+    {% for domain in domain_summary %}
+        <tr>
+            <td>{{ domain.name }}</td>
+            <td>{{ domain.url_count }}</td>
+        </tr>
+    {% endfor %}
+</tbody>
+
+
+<div class="toast align-items-center text-white bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body">
+        Hello, world! This is a toast message.
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>

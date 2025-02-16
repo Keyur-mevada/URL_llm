@@ -1,0 +1,20 @@
+cs_llm/
+|-- cs_llm/
+|   |-- init.py
+|   |-- settings.py
+|   |-- urls.py
+|   |-- wsgi.py
+|
+|-- llm/
+|   |-- init.py
+|   |-- admin.py
+|   |-- apps.py
+|   |-- models.py
+|   |-- tasks.py
+|   |-- utils.py
+|   |-- views.py
+|   |-- urls.py
+|   |-- management/
+|   |   |-- commands/
+|   |       |-- fetch_urls.py
+|-- manage.py

@@ -1,0 +1,13 @@
+{% for domain in domain_summary %}
+<tr id="domain-row-{{ domain.id }}">
+    <td>{{ domain.name }}</td>
+    <td>{{ domain.url_count }}</td>
+    <td>{{ domain.meta_fetched_percentage|floatformat:2 }}%</td>
+    <td>{{ domain.known_author_percentage|floatformat:2 }}%</td>
+    <td>
+        <button class="btn btn-danger btn-sm" onclick="confirmDelete({{ domain.id }})">
+            <i class="fas fa-trash-alt"></i> <!-- Font Awesome icon -->
+        </button>
+    </td>
+</tr>
+{% endfor %}

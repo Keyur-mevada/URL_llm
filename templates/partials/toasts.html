@@ -1,0 +1,104 @@
+<script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    function handleResponse(event) {
+        const response = event.detail.xhr.response;
+        const data = JSON.parse(response);
+
+        // Access the form from the event target
+        const form = event.target;
+
+        if (data.status === 'success') {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: data.message,
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+
+            // Replace table body on success
+            document.getElementById('domain-summary-table-body').innerHTML = data.table_html;
+
+            // Reset the form
+            form.reset();
+
+        } else if (data.status === 'error') {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'error',
+                title: 'Error!',
+                text: data.message,
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+        }
+    }
+
+    function confirmDelete(domainId) {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "This domain will be deleted permanently!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                deleteDomain(domainId);
+            }
+        });
+    }
+
+    function deleteDomain(domainId) {
+        const spinner = document.getElementById('delete-spinner');
+        spinner.style.display = 'block'; // Show spinner
+    
+        fetch(`/delete-domain/${domainId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            spinner.style.display = 'none'; // Hide spinner
+    
+            if (data.status === 'success') {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: data.message,
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true
+                });
+    
+                // Update table content (replace tbody)
+                document.getElementById('domain-summary-table-body').innerHTML = data.table_html;
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: data.message
+                });
+            }
+        })
+        .catch(error => {
+            spinner.style.display = 'none'; // Hide spinner even if error
+    
+            Swal.fire({
+                icon: 'error',
+                title: 'Oops...',
+                text: 'Something went wrong!'
+            });
+            console.error('Delete Error:', error);
+        });
+    }
+</script>

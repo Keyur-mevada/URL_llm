@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_q',
     'llm',
 ]
 
@@ -78,6 +79,9 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        'OPTIONS': {
+            'timeout': 30,
+        }
     }
 }
 
@@ -129,3 +133,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 STATICFILES_DIRS = [
     BASE_DIR / "static"
 ]
+
+Q_CLUSTER = {
+'name': 'cs_llm_q_cluster',
+'workers': 4,
+'recycle': 500,
+'timeout': 3600,
+'retry': 120,
+'queue_limit': 50,
+'bulk': 10,
+'orm': 'default'
+}
